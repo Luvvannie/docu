@@ -2,8 +2,11 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import dotenv from "dotenv";
+import multer from "multer";
 
 dotenv.config();
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 async function startServer() {
   const app = express();
@@ -11,19 +14,34 @@ async function startServer() {
 
   app.use(express.json());
 
-  // API Route for Upload Webhook Proxy
-  app.post("/api/webhook/upload", async (req, res) => {
+  // API Route for Upload Webhook Proxy - Using multer to capture the file
+  app.post("/api/webhook/upload", upload.single('data'), async (req, res) => {
     const webhookUrl = process.env.VITE_UPLOAD_WEBHOOK;
     if (!webhookUrl) {
       return res.status(500).json({ error: "Upload webhook URL not configured" });
     }
 
     try {
-      console.log(`Proxying upload to: ${webhookUrl}`);
+      const { user_id } = req.body;
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ error: "No file provided in field 'data'" });
+      }
+
+      console.log(`Proxying binary upload for user ${user_id} to: ${webhookUrl}`);
+
+      // Create new FormData for the outgoing request
+      const formData = new FormData();
+      formData.append('user_id', user_id || '');
+      
+      // Convert buffer to Blob for the outgoing fetch
+      const fileBlob = new Blob([file.buffer], { type: file.mimetype });
+      formData.append('data', fileBlob, file.originalname);
+
       const response = await fetch(webhookUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req.body),
+        body: formData,
       });
       
       const data = await response.text();

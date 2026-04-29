@@ -58,36 +58,24 @@ export default function App() {
         size: (file.size / 1024 / 1024).toFixed(2) + " MB"
       };
 
-      // Read file as Base64 to send to webhook
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64Data = e.target?.result;
-        
-        try {
-          await fetch('/api/webhook/upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              user_id: USER_ID,
-              data: {
-                event: 'file_upload',
-                fileName: file.name,
-                fileType: file.type,
-                fileSize: file.size,
-                content: base64Data
-              }
-            })
-          });
-        } catch (err) {
-          console.error("Upload proxy call failed for " + file.name, err);
-        }
-      };
-      reader.readAsDataURL(file);
+      // Send as binary via FormData
+      const formData = new FormData();
+      formData.append('user_id', USER_ID);
+      formData.append('data', file); // Field name is "data"
+
+      try {
+        await fetch('/api/webhook/upload', {
+          method: 'POST',
+          body: formData
+        });
+      } catch (err) {
+        console.error("Upload proxy call failed for " + file.name, err);
+      }
 
       setFiles(prev => [...prev, fileInfo]);
     }
 
-    // Small delay to simulate processing after webhook call
+    // Small delay to simulate processing
     setTimeout(() => {
       setIsUploading(false);
     }, 1000);
