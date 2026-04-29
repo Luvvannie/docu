@@ -17,7 +17,7 @@ import {
   Zap,
   Github
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const SUPPORTED_FORMATS = [
   { icon: FileText, label: "PDF Documents", color: "text-blue-600" },
@@ -30,11 +30,19 @@ const USER_ID = "annabelijeoma18@gmail.com";
 
 export default function App() {
   const [isUploading, setIsUploading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [files, setFiles] = useState<{ name: string; type: string; size: string }[]>([]);
   const [inputText, setInputText] = useState("");
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([
     { role: "assistant", content: "Welcome. I have indexed the archive. What knowledge shall we extract today?" }
   ]);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages, isTyping]);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = event.target.files;
@@ -93,10 +101,11 @@ export default function App() {
     const userMessage = inputText;
     setMessages(prev => [...prev, { role: "user", content: userMessage }]);
     setInputText("");
+    setIsTyping(true);
 
     // Webhook implementation for chat via server-side proxy
     try {
-      await fetch('/api/webhook/chat', {
+      const response = await fetch('/api/webhook/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -107,17 +116,33 @@ export default function App() {
           }
         })
       });
-    } catch (err) {
-      console.error("Chat proxy call failed", err);
-    }
 
-    // Mock response
-    setTimeout(() => {
+      const responseData = await response.text();
+      let displayMessage = responseData;
+      
+      try {
+        // If it looks like JSON, parse it and try to extract a logical message
+        if (responseData.trim().startsWith('{') || responseData.trim().startsWith('[')) {
+          const json = JSON.parse(responseData);
+          displayMessage = json.message || json.reply || json.output || json.response || JSON.stringify(json, null, 2);
+        }
+      } catch (e) {
+        // Not JSON or failed to parse, use raw text
+      }
+
       setMessages(prev => [...prev, { 
         role: "assistant", 
-        content: `I've processed your query about "${userMessage}". Based on the ${files.length} documents uploaded, I can see a strong correlation between the data points.` 
+        content: displayMessage
       }]);
-    }, 1000);
+    } catch (err) {
+      console.error("Chat proxy call failed", err);
+      setMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: "Error: I encountered a connection issue. Please try again later." 
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (
@@ -258,7 +283,7 @@ export default function App() {
                   </div>
                </div>
 
-               <div className="flex-1 overflow-y-auto p-8 space-y-8 scroll-smooth">
+               <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-8 space-y-8 scroll-smooth">
                   {messages.map((m, i) => (
                     <motion.div 
                       key={i}
@@ -273,13 +298,41 @@ export default function App() {
                       }`}>
                         <div className="flex items-center gap-2 mb-2 opacity-50">
                           <span className="text-[9px] font-bold uppercase tracking-widest">
-                            {m.role === 'user' ? 'You' : 'Museo AI'}
+                            {m.role === 'user' ? 'You' : 'The Oracle'}
                           </span>
                         </div>
-                        <p className="text-sm leading-relaxed">{m.content}</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.content}</p>
                       </div>
                     </motion.div>
                   ))}
+
+                  {isTyping && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex justify-start"
+                    >
+                      <div className="bg-beige/20 text-burgundy border border-burgundy/5 rounded-3xl rounded-tl-none p-6">
+                        <div className="flex gap-1">
+                          <motion.div 
+                            animate={{ opacity: [0.4, 1, 0.4] }} 
+                            transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+                            className="w-1.5 h-1.5 rounded-full bg-burgundy" 
+                          />
+                          <motion.div 
+                            animate={{ opacity: [0.4, 1, 0.4] }} 
+                            transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut", delay: 0.2 }}
+                            className="w-1.5 h-1.5 rounded-full bg-burgundy" 
+                          />
+                          <motion.div 
+                            animate={{ opacity: [0.4, 1, 0.4] }} 
+                            transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut", delay: 0.4 }}
+                            className="w-1.5 h-1.5 rounded-full bg-burgundy" 
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
                </div>
 
                <div className="p-8 bg-beige/10 border-t border-burgundy/5">
