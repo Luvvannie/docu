@@ -98,8 +98,8 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          user_id: USER_ID,
           data: {
+            user_id: USER_ID,
             message: userMessage, 
             files_count: files.length 
           }
