@@ -26,6 +26,8 @@ const SUPPORTED_FORMATS = [
   { icon: Music, label: "Audio/Sound", color: "text-emerald-600" },
 ];
 
+const USER_ID = "annabelijeoma18@gmail.com";
+
 export default function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [files, setFiles] = useState<{ name: string; type: string; size: string }[]>([]);
@@ -66,11 +68,14 @@ export default function App() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-              event: 'file_upload',
-              fileName: file.name,
-              fileType: file.type,
-              fileSize: file.size,
-              data: base64Data
+              user_id: USER_ID,
+              data: {
+                event: 'file_upload',
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size,
+                content: base64Data
+              }
             })
           });
         } catch (err) {
@@ -104,7 +109,13 @@ export default function App() {
       await fetch('/api/webhook/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage, files_count: files.length })
+        body: JSON.stringify({ 
+          user_id: USER_ID,
+          data: {
+            message: userMessage, 
+            files_count: files.length 
+          }
+        })
       });
     } catch (err) {
       console.error("Chat proxy call failed", err);
