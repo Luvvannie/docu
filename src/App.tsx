@@ -61,6 +61,8 @@ export default function App() {
       // Send as binary via FormData
       const formData = new FormData();
       formData.append('user_id', USER_ID);
+      formData.append('file_name', file.name);
+      formData.append('file_type', file.type);
       formData.append('data', file); // Field name is "data"
 
       try {

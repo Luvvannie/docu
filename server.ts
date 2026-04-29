@@ -22,18 +22,20 @@ async function startServer() {
     }
 
     try {
-      const { user_id } = req.body;
+      const { user_id, file_name, file_type } = req.body;
       const file = req.file;
 
       if (!file) {
         return res.status(400).json({ error: "No file provided in field 'data'" });
       }
 
-      console.log(`Proxying binary upload for user ${user_id} to: ${webhookUrl}`);
+      console.log(`Proxying binary upload for user ${user_id} (${file_name}) to: ${webhookUrl}`);
 
       // Create new FormData for the outgoing request
       const formData = new FormData();
       formData.append('user_id', user_id || '');
+      formData.append('file_name', file_name || file.originalname);
+      formData.append('file_type', file_type || file.mimetype);
       
       // Convert buffer to Blob for the outgoing fetch
       const fileBlob = new Blob([file.buffer], { type: file.mimetype });
