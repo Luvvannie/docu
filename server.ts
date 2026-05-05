@@ -16,7 +16,7 @@ async function startServer() {
 
   // API Route for Upload Webhook Proxy - Using multer to capture the file
   app.post("/api/webhook/upload", upload.single('data'), async (req, res) => {
-    const webhookUrl = process.env.VITE_UPLOAD_WEBHOOK;
+    const webhookUrl = process.env.UPLOAD_WEBHOOK_URL;
     if (!webhookUrl) {
       return res.status(500).json({ error: "Upload webhook URL not configured" });
     }
@@ -56,7 +56,7 @@ async function startServer() {
 
   // API Route for Chat Webhook Proxy
   app.post("/api/webhook/chat", async (req, res) => {
-    const webhookUrl = process.env.VITE_CHAT_WEBHOOK;
+    const webhookUrl = process.env.CHAT_WEBHOOK_URL;
     if (!webhookUrl) {
       return res.status(500).json({ error: "Chat webhook URL not configured" });
     }

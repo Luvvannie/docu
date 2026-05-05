@@ -17,7 +17,8 @@ import {
   Zap,
   Github
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, ChangeEvent } from "react";
+import AuthPage from "./components/AuthPage";
 
 const SUPPORTED_FORMATS = [
   { icon: FileText, label: "PDF Documents", color: "text-blue-600" },
@@ -26,9 +27,8 @@ const SUPPORTED_FORMATS = [
   { icon: Music, label: "Audio/Sound", color: "text-emerald-600" },
 ];
 
-const USER_ID = "annabelijeoma18@gmail.com";
-
 export default function App() {
+  const [user, setUser] = useState<string | null>(() => localStorage.getItem("museo_user"));
   const [isUploading, setIsUploading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [files, setFiles] = useState<{ name: string; type: string; size: string }[]>([]);
@@ -39,12 +39,20 @@ export default function App() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (user) {
+      localStorage.setItem("museo_user", user);
+    } else {
+      localStorage.removeItem("museo_user");
+    }
+  }, [user]);
+
+  useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages, isTyping]);
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = event.target.files;
     if (!selectedFiles || selectedFiles.length === 0) return;
 
@@ -68,7 +76,7 @@ export default function App() {
 
       // Send as binary via FormData
       const formData = new FormData();
-      formData.append('user_id', USER_ID);
+      formData.append('user_id', user || '');
       formData.append('file_name', file.name);
       formData.append('file_type', file.type);
       formData.append('data', file); // Field name is "data"
@@ -110,7 +118,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           data: {
-            user_id: USER_ID,
+            user_id: user,
             message: userMessage, 
             files_count: files.length 
           }
@@ -145,6 +153,10 @@ export default function App() {
     }
   };
 
+  if (!user) {
+    return <AuthPage onLogin={(email) => setUser(email)} />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col selection:bg-burgundy/20">
       {/* Navigation */}
@@ -160,9 +172,17 @@ export default function App() {
             <a href="#" className="hover:text-burgundy transition-colors">Archive</a>
             <a href="#" className="hover:text-burgundy transition-colors">Intelligence</a>
         </div>
-        <button id="get-started-nav" className="px-5 py-2.5 bg-burgundy text-beige rounded-full text-sm font-medium hover:bg-burgundy-dark transition-colors flex items-center gap-2">
-          Contact <ArrowRight size={14} />
-        </button>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setUser(null)}
+            className="text-xs font-bold uppercase tracking-widest text-burgundy/40 hover:text-burgundy transition-colors"
+          >
+            Logout
+          </button>
+          <button id="get-started-nav" className="px-5 py-2.5 bg-burgundy text-beige rounded-full text-sm font-medium hover:bg-burgundy-dark transition-colors flex items-center gap-2">
+            Contact <ArrowRight size={14} />
+          </button>
+        </div>
       </nav>
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-12 md:py-16 flex flex-col gap-20">
